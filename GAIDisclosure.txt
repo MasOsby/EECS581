@@ -1,0 +1,429 @@
+For this Assignment ChatGPT version 5.6 Sol was used on Sep 27th
+
+All code was generate via LLM and was reviewed by Mo Osby
+
+Starting prompt:
+
+Write me a C++ program that reads a line of text and extracts a single valid IPv4 address
+optionally followed by a port number :port, it must contain exactly 4 octets with
+no unnecessary leading zeros, manually parse numbers character by character,
+dont use stoi, atoim regexm sscanf, IP parsing libraries, or any other libraries,
+for the function it should return true if a valid address was found, 0 other wise,
+on success outAddress holds the 32 bit value and outport holds the port number or -1
+if no port was present, on failure outAddress is set to 0 and outPort is set to -1,
+bool extractIPv4(const std::string& str, unsigned long& outAddress, int& outPort); 
+
+Code generated: 
+
+#include <iostream>
+#include <string>
+#include <cctype>
+
+bool extractIPv4(const std::string& str, unsigned long& outAddress, int& outPort)
+{
+    outAddress = 0;
+    outPort = -1;
+
+    for (size_t start = 0; start < str.length(); start++)
+    {
+        if (!isdigit(str[start]))
+            continue;
+
+        size_t i = start;
+        int octets[4];
+
+        bool valid = true;
+
+        for (int part = 0; part < 4; part++)
+        {
+            if (i >= str.length() || !isdigit(str[i]))
+            {
+                valid = false;
+                break;
+            }
+
+            int value = 0;
+            int digits = 0;
+
+            // Do not allow leading zeros
+            if (str[i] == '0' &&
+                i + 1 < str.length() &&
+                isdigit(str[i + 1]))
+            {
+                valid = false;
+                break;
+            }
+
+            while (i < str.length() &&
+                   isdigit(str[i]) &&
+                   digits < 3)
+            {
+                value = value * 10 + (str[i] - '0');
+                i++;
+                digits++;
+            }
+
+            if (value > 255)
+            {
+                valid = false;
+                break;
+            }
+
+            octets[part] = value;
+
+            if (part < 3)
+            {
+                if (i >= str.length() || str[i] != '.')
+                {
+                    valid = false;
+                    break;
+                }
+
+                i++;
+            }
+        }
+
+        if (!valid)
+            continue;
+
+        int port = -1;
+
+        if (i < str.length() && str[i] == ':')
+        {
+            i++;
+
+            if (i >= str.length() || !isdigit(str[i]))
+                continue;
+
+            int value = 0;
+            int digits = 0;
+
+            if (str[i] == '0' &&
+                i + 1 < str.length() &&
+                isdigit(str[i + 1]))
+            {
+                continue;
+            }
+
+            while (i < str.length() &&
+                   isdigit(str[i]) &&
+                   digits < 5)
+            {
+                value = value * 10 + (str[i] - '0');
+                i++;
+                digits++;
+            }
+
+            if (value > 65535)
+                continue;
+
+            port = value;
+        }
+
+        outAddress =
+            ((unsigned long)octets[0] << 24) |
+            ((unsigned long)octets[1] << 16) |
+            ((unsigned long)octets[2] << 8) |
+            (unsigned long)octets[3];
+
+        outPort = port;
+        return true;
+    }
+
+    return false;
+}
+
+int main()
+{
+    std::string input;
+
+    while (true)
+    {
+        std::cout << "Enter a string (or 'END' to quit): ";
+        std::getline(std::cin, input);
+
+        if (input == "END")
+        {
+            std::cout << "Program terminated." << std::endl;
+            break;
+        }
+
+        unsigned long address;
+        int port;
+
+        if (extractIPv4(input, address, port))
+        {
+            std::cout << "IPv4 address found. Decimal value: "
+                      << address;
+
+            if (port != -1)
+                std::cout << ", port: " << port;
+            else
+                std::cout << ", no port";
+
+            std::cout << std::endl;
+        }
+        else
+        {
+            std::cout << "No valid IPv4 address found."
+                      << std::endl;
+        }
+    }
+
+    return 0;
+}
+
+Test cases all invalid:
+192.168.1.1.
+192.168.01.1
+1.2.3.4:99999
+12.34.56
+256.1.1.1
+1.2.3.4:123456
+1.2.3.4:
+1.2.3.4.5
+
+Bugs: 
+Found case 1, 4, 5, 7 as valid when should be invalid 
+
+Second Prompt:
+When testing the program these following test cases that are supposed to produce invalid
+ipv4 produced valid ips,the test cases are: 192.168.1.1. , 256.1.1.1, 1.2.3.4:123456, 1.2.3.4.5,
+i want you to correct them while following the restrictions of the previous prompt,
+if the string fails on first parse then no partial matches inside should pass"
+
+Output:
+bool extractIPv4(const std::string& str, unsigned long& outAddress, int& outPort)
+{
+    outAddress = 0;
+    outPort = -1;
+
+    size_t start = 0;
+
+    while (start < str.length())
+    {
+        // Skip garbage characters
+        if (!isdigit(str[start]))
+        {
+            start++;
+            continue;
+        }
+
+        // Find the entire candidate token.
+        // Digits, periods, and colons are considered part of a candidate.
+        size_t end = start;
+
+        while (end < str.length() &&
+              (isdigit(str[end]) || str[end] == '.' || str[end] == ':'))
+        {
+            end++;
+        }
+
+        size_t i = start;
+        int octets[4];
+        bool valid = true;
+
+        for (int part = 0; part < 4; part++)
+        {
+            if (i >= end || !isdigit(str[i]))
+            {
+                valid = false;
+                break;
+            }
+
+            int value = 0;
+            int digits = 0;
+
+            if (str[i] == '0' &&
+                i + 1 < end &&
+                isdigit(str[i + 1]))
+            {
+                valid = false;
+                break;
+            }
+
+            while (i < end && isdigit(str[i]))
+            {
+                // More than 3 digits in an octet
+                if (digits >= 3)
+                {
+                    valid = false;
+                    break;
+                }
+
+                value = value * 10 + (str[i] - '0');
+                i++;
+                digits++;
+            }
+
+            if (!valid || value > 255)
+            {
+                valid = false;
+                break;
+            }
+
+            octets[part] = value;
+
+            if (part < 3)
+            {
+                if (i >= end || str[i] != '.')
+                {
+                    valid = false;
+                    break;
+                }
+
+                i++;
+            }
+        }
+
+        int port = -1;
+
+        if (valid && i < end && str[i] == ':')
+        {
+            i++;
+
+            if (i >= end || !isdigit(str[i]))
+            {
+                valid = false;
+            }
+            else
+            {
+                int value = 0;
+                int digits = 0;
+
+                if (str[i] == '0' &&
+                    i + 1 < end &&
+                    isdigit(str[i + 1]))
+                {
+                    valid = false;
+                }
+
+                while (valid && i < end && isdigit(str[i]))
+                {
+                    if (digits >= 5)
+                    {
+                        valid = false;
+                        break;
+                    }
+
+                    value = value * 10 + (str[i] - '0');
+                    i++;
+                    digits++;
+                }
+
+                if (valid && value > 65535)
+                    valid = false;
+
+                if (valid)
+                    port = value;
+            }
+        }
+
+        // Anything remaining means the entire candidate was malformed.
+        if (valid && i != end)
+            valid = false;
+
+        if (valid)
+        {
+            outAddress =
+                ((unsigned long)octets[0] << 24) |
+                ((unsigned long)octets[1] << 16) |
+                ((unsigned long)octets[2] << 8) |
+                (unsigned long)octets[3];
+
+            outPort = port;
+            return true;
+        }
+
+        // Skip the entire invalid candidate rather than trying
+        // to extract a valid substring from inside of it.
+        start = end;
+    }
+
+    return false;
+}
+
+This prompt changes the behavior of a invalid string, if a run of digits/periods/colons
+is wrong, it deems the whole string invalid
+
+Test cases: 
+192.168.1.1 -> Valid
+0.0.0.0 -> Valid
+255.255.255.255 -> Valid
+10.0.0.255:8080 -> Valid port 8080
+1.2.3.4:0 -> Valid port 0
+1.2.3.4:65535 -> Valid port 65535
+1.2.3.4:65536 -> Invalid
+01.2.3.4 -> Invalid
+1.02.3.4 -> Invalid
+1.2.003.4 -> Invalid
+1.2.3.04 -> Invalid
+1.2.3.4:080 -> Invalid
+1..2.3.4 -> Invalid
+1.2.3.4::80 -> Invalid
+1.2.3 -> Invalid 
+hello 192.168.1.1 goodbye  -> Valid
+192a168.1.1.1 -> Valid
+
+All test cases passed this second time, properly handling cases with garabage text
+and edge cases of ports greater than 65535 and 0 or greater.
+
+Third prompt to fix formmating: 
+
+The extraction function is now passing all of my test cases, but the output
+formatting in main does not match the required format. On success it needs 
+to print: Extracted IPv4 address: A.B.C.D (decimal value: N, port: P), where 
+N is the 32-bit decimal value and P is the port number or the word none if 
+there is no port. On failure it should print: Invalid input: no valid IPv4 
+address found. Keep the input loop running until the user enters END, then 
+print Program terminated. Modify main to match this exact formatting without
+changing the extractIPv4 function.
+
+
+Code:
+int main()
+{
+    std::string input;
+
+    while (true)
+    {
+        std::cout << "Enter a string (or 'END' to quit): ";
+        std::getline(std::cin, input);
+
+        if (input == "END")
+        {
+            std::cout << "Program terminated." << std::endl;
+            break;
+        }
+
+        unsigned long address;
+        int port;
+
+        if (extractIPv4(input, address, port))
+        {
+            unsigned long a = (address >> 24) & 255;
+            unsigned long b = (address >> 16) & 255;
+            unsigned long c = (address >> 8) & 255;
+            unsigned long d = address & 255;
+
+            std::cout << "Extracted IPv4 address: "
+                      << a << "." << b << "." << c << "." << d
+                      << " (decimal value: " << address
+                      << ", port: ";
+
+            if (port == -1)
+                std::cout << "none";
+            else
+                std::cout << port;
+
+            std::cout << ")" << std::endl;
+        }
+        else
+        {
+            std::cout << "Invalid input: no valid IPv4 address found"
+                      << std::endl;
+        }
+    }
+
+    return 0;
+}

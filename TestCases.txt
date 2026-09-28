@@ -1,0 +1,28 @@
+Test cases all invalid:
+192.168.1.1.
+192.168.01.1
+1.2.3.4:99999
+12.34.56
+256.1.1.1
+1.2.3.4:123456
+1.2.3.4:
+1.2.3.4.5
+
+Test cases: 
+192.168.1.1 -> Valid
+0.0.0.0 -> Valid
+255.255.255.255 -> Valid
+10.0.0.255:8080 -> Valid port 8080
+1.2.3.4:0 -> Valid port 0
+1.2.3.4:65535 -> Valid port 65535
+1.2.3.4:65536 -> Invalid
+01.2.3.4 -> Invalid
+1.02.3.4 -> Invalid
+1.2.003.4 -> Invalid
+1.2.3.04 -> Invalid
+1.2.3.4:080 -> Invalid
+1..2.3.4 -> Invalid
+1.2.3.4::80 -> Invalid
+1.2.3 -> Invalid 
+hello 192.168.1.1 goodbye  -> Valid
+192a168.1.1.1 -> Valid
